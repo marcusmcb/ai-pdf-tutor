@@ -13,3 +13,44 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  pdfs      PDF[]
+  chats     ChatHistory[]
+}
+
+model PDF {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  filename    String
+  url         String   // Storage location (S3/local/etc)
+  uploadedAt  DateTime @default(now())
+  metadata    Json?
+  chats       ChatHistory[]
+  annotations Annotation[]
+}
+
+model ChatHistory {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  pdf       PDF      @relation(fields: [pdfId], references: [id])
+  pdfId     String
+  messages  Json     // Array of messages (user/AI, timestamp, text, etc)
+  createdAt DateTime @default(now())
+}
+
+model Annotation {
+  id        String   @id @default(uuid())
+  pdf       PDF      @relation(fields: [pdfId], references: [id])
+  pdfId     String
+  page      Int
+  type      String   // highlight, circle, etc
+  data      Json     // coordinates, color, etc
+  createdAt DateTime @default(now())
+}
