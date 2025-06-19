@@ -2,18 +2,18 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function AuthPage() {
 	const [isSignUp, setIsSignUp] = useState(false)
 	const [email, setEmail] = useState('')
 	const [password, setPassword] = useState('')
 	const [error, setError] = useState('')
-	const [debug, setDebug] = useState('')
+	const router = useRouter()
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault()
 		setError('')
-		setDebug('')
 		if (isSignUp) {
 			// Call custom API route to create user
 			const res = await fetch('/api/auth/register', {
@@ -32,23 +32,20 @@ export default function AuthPage() {
 			password,
 			redirect: false,
 		})
-		setDebug(JSON.stringify(result))
 		if (result?.error) {
 			setError('Invalid email or password.')
+		} else {
+			router.push('/dashboard')
 		}
-		// No redirect or navigation at all
 	}
 
 	return (
-		<div className='min-h-screen flex items-center justify-center bg-gray-50'>
-			<div className='absolute top-2 left-2 text-xs text-gray-400 break-all max-w-xs'>
-				{debug}
-			</div>
+		<div className='min-h-screen flex items-center justify-center bg-gray-900'>
 			<form
 				onSubmit={handleSubmit}
-				className='bg-white p-8 rounded shadow-md w-full max-w-md'
+				className='bg-gray-800 p-8 rounded shadow-md w-full max-w-md border border-gray-700'
 			>
-				<h2 className='text-2xl font-bold mb-6 text-center'>
+				<h2 className='text-2xl font-bold mb-6 text-center text-white'>
 					{isSignUp ? 'Sign Up' : 'Sign In'}
 				</h2>
 				<input
@@ -56,7 +53,7 @@ export default function AuthPage() {
 					placeholder='Email'
 					value={email}
 					onChange={(e) => setEmail(e.target.value)}
-					className='w-full mb-4 p-2 border rounded text-black bg-white'
+					className='w-full mb-4 p-2 border rounded text-white bg-gray-900 border-gray-700 placeholder-gray-400'
 					required
 				/>
 				<input
@@ -64,7 +61,7 @@ export default function AuthPage() {
 					placeholder='Password'
 					value={password}
 					onChange={(e) => setPassword(e.target.value)}
-					className='w-full mb-4 p-2 border rounded text-black bg-white'
+					className='w-full mb-4 p-2 border rounded text-white bg-gray-900 border-gray-700 placeholder-gray-400'
 					required
 				/>
 				{error && <div className='text-red-500 mb-4'>{error}</div>}
@@ -77,7 +74,7 @@ export default function AuthPage() {
 				<div className='mt-4 text-center'>
 					<button
 						type='button'
-						className='text-blue-600 hover:underline'
+						className='text-blue-400 hover:underline'
 						onClick={() => setIsSignUp(!isSignUp)}
 					>
 						{isSignUp
