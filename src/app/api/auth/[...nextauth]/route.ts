@@ -1,5 +1,3 @@
-// This file is now obsolete and replaced by src/app/api/auth/[...nextauth]/route.ts
-
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
@@ -51,7 +49,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/signin",
-    // You can add more custom pages here
   },
 };
 
