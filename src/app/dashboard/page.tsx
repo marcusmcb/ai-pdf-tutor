@@ -1,9 +1,20 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/route";
+"use client";
+import { useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import SessionProviderWrapper from "./SessionProviderWrapper";
 
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+export default function DashboardPage() {
+  return (
+    <SessionProviderWrapper>
+      <DashboardContent />
+    </SessionProviderWrapper>
+  );
+}
+
+function DashboardContent() {
+  const { data: session } = useSession();
+  const [status, setStatus] = useState<string | null>(null);
 
   if (!session) {
     return (
@@ -16,17 +27,31 @@ export default async function DashboardPage() {
     );
   }
 
+  async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setStatus(null);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    setStatus("Uploading...");
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (res.ok) {
+      setStatus("Upload successful!");
+      form.reset();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setStatus(data.error ? `Error: ${data.error}` : "Upload failed.");
+    }
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-900">
       <div className="text-center bg-gray-800 p-8 rounded shadow-md border border-gray-700">
         <h1 className="text-3xl font-bold mb-4 text-white">Welcome to your Dashboard, {session.user?.email}!</h1>
         <p className="mb-4 text-gray-300">Upload a PDF to get started.</p>
-        <form
-          action="/api/upload"
-          method="post"
-          encType="multipart/form-data"
-          className="mb-6"
-        >
+        <form onSubmit={handleUpload} className="mb-6">
           <input
             type="file"
             name="pdf"
@@ -41,6 +66,7 @@ export default async function DashboardPage() {
             Upload PDF
           </button>
         </form>
+        {status && <div className="mb-4 text-white">{status}</div>}
         <Link href="/" className="text-blue-400 underline">Go to Home</Link>
       </div>
     </main>
