@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI PDF Tutor
 
-## Getting Started
+A modern web app for uploading, viewing, and chatting with your PDFs using AI. Built with Next.js (App Router), TypeScript, Prisma, NextAuth, and Tailwind CSS.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **User Authentication**: Secure sign-in/sign-out with NextAuth.
+- **PDF Upload & Management**: Upload, list, and view your PDFs in a responsive dashboard.
+- **PDF Viewing**: Native `<iframe>` for fast, reliable PDF rendering (no PDF.js/react-pdf dependencies).
+- **AI Chat Interface**: Ask questions about your PDFs and get AI-powered answers (backend integration pending).
+- **Modern UI**: Responsive, two-column dashboard with Tailwind CSS.
+- **Robust Backend**: Prisma ORM with a singleton pattern for efficient DB access.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quick Start
 
-## Learn More
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Set up environment variables:**
+   - Copy `.env.example` to `.env` and fill in your database and NextAuth secrets.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Run database migrations:**
+   ```bash
+   npx prisma migrate dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+5. **Sign in and use the dashboard:**
+   - Upload PDFs, view them, and chat (AI Q&A coming soon).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+- `src/app/dashboard/` — Main dashboard UI, PDF viewer, chat interface
+- `src/app/api/` — API routes for auth, PDF upload, listing, (AI chat coming soon)
+- `src/lib/prisma.ts` — PrismaClient singleton
+- `prisma/schema.prisma` — Database schema
+- `public/uploads/` — Uploaded PDF files
+
+---
+
+## Tech Stack
+
+- **Next.js** (App Router)
+- **TypeScript**
+- **Prisma** ORM
+- **NextAuth** (authentication)
+- **Tailwind CSS**
+
+---
+
+## Roadmap
+
+- [x] PDF upload, listing, and viewing
+- [x] User authentication
+- [x] Responsive dashboard UI
+- [x] Chat UI scaffold
+- [ ] AI backend integration (PDF text extraction, OpenAI/LLM Q&A)
+- [ ] Persist chat history per user/PDF
+- [ ] Advanced PDF analysis tools
+
+---
+
+## Contributing
+
+PRs and issues welcome! Please open an issue to discuss major changes first.
+
+---
+
+## License
+
+MIT
