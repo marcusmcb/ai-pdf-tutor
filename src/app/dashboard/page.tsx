@@ -143,9 +143,11 @@ const DashboardContent: React.FC = () => {
             {selectedPdf && selectedPdf.url && selectedPdf.url.startsWith('/uploads/') ? (
               <>
                 <h2 className="text-lg font-bold mb-2 text-white">Viewing: {selectedPdf.filename}</h2>
-                <PDFViewer url={selectedPdf.url} />
+                <div className="w-full mb-4">
+                  <PDFViewer url={selectedPdf.url} />
+                </div>
                 <button
-                  className="mt-2 text-red-400 underline"
+                  className="mt-4 text-red-400 underline"
                   onClick={() => setSelectedPdf(null)}
                 >
                   Close PDF
