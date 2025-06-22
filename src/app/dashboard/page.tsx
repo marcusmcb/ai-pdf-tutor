@@ -19,6 +19,8 @@ const DashboardContent: React.FC = () => {
   const [pdfs, setPdfs] = useState<any[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<any | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; content: string }[]>([]);
+  const [userInput, setUserInput] = useState("");
 
   useEffect(() => {
     if (session) {
@@ -58,6 +60,17 @@ const DashboardContent: React.FC = () => {
       const data = await res.json().catch(() => ({}));
       setStatus(data.error ? `Error: ${data.error}` : "Upload failed.");
     }
+  };
+
+  const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!userInput.trim()) return;
+    setChatMessages((msgs) => [...msgs, { role: "user", content: userInput }]);
+    setUserInput("");
+    // Placeholder: Add AI response after user message
+    setTimeout(() => {
+      setChatMessages((msgs) => [...msgs, { role: "ai", content: "[AI response goes here]" }]);
+    }, 800);
   };
 
   if (!session) {
@@ -112,7 +125,7 @@ const DashboardContent: React.FC = () => {
                 <ul className="space-y-2">
                   {pdfs.map((pdf) => (
                     <li key={pdf.id} className={`bg-gray-900 p-2 rounded text-white flex items-center justify-between ${selectedPdf && selectedPdf.id === pdf.id ? 'border border-blue-500' : ''}`}>
-                      <span>{pdf.filename}</span>
+                      <span className="truncate max-w-[10rem] md:max-w-[14rem] lg:max-w-[20rem] overflow-hidden whitespace-nowrap">{pdf.filename}</span>
                       <button
                         className="text-blue-400 underline ml-2"
                         onClick={() => setSelectedPdf(pdf)}
@@ -125,8 +138,8 @@ const DashboardContent: React.FC = () => {
               )}
             </div>
           </div>
-          {/* Right column: PDF Viewer */}
-          <div className="md:w-2/3 w-full bg-gray-800 p-6 rounded shadow-md border border-gray-700 min-h-[600px] flex flex-col items-center justify-center">
+          {/* Right column: PDF Viewer + Chat */}
+          <div className="md:w-2/3 w-full bg-gray-800 p-6 rounded shadow-md border border-gray-700 min-h-[600px] flex flex-col items-center justify-start">
             {selectedPdf && selectedPdf.url && selectedPdf.url.startsWith('/uploads/') ? (
               <>
                 <h2 className="text-lg font-bold mb-2 text-white">Viewing: {selectedPdf.filename}</h2>
@@ -137,6 +150,34 @@ const DashboardContent: React.FC = () => {
                 >
                   Close PDF
                 </button>
+                {/* Chat UI */}
+                <div className="w-full flex flex-col flex-1 mt-6 max-h-[350px] overflow-y-auto bg-gray-900 rounded p-4 border border-gray-700">
+                  {chatMessages.length === 0 && (
+                    <div className="text-gray-400 text-center">Ask a question about this PDF to get started.</div>
+                  )}
+                  {chatMessages.map((msg, idx) => (
+                    <div key={idx} className={`mb-2 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`px-4 py-2 rounded-lg max-w-[80%] ${msg.role === "user" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-100"}`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <form onSubmit={handleChatSubmit} className="w-full flex mt-2 gap-2">
+                  <input
+                    type="text"
+                    value={userInput}
+                    onChange={e => setUserInput(e.target.value)}
+                    className="flex-1 p-2 rounded border border-gray-700 bg-gray-900 text-white focus:outline-none"
+                    placeholder="Ask a question about this PDF..."
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Send
+                  </button>
+                </form>
               </>
             ) : pdfs.length === 0 ? (
               <div className="text-gray-400 text-center">Upload a PDF file to get started.</div>
