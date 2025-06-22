@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import SessionProviderWrapper from "./SessionProviderWrapper";
+import dynamic from "next/dynamic";
+
+// Properly type the dynamic import for PDFViewer
+const PDFViewer = dynamic(() => import("./PdfViewer"), { ssr: false }) as React.ComponentType<{ url: string }>;
 
 export default function DashboardPage() {
   return (
@@ -17,6 +21,7 @@ function DashboardContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [pdfs, setPdfs] = useState<any[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<any | null>(null);
 
   useEffect(() => {
     if (session) {
@@ -30,6 +35,12 @@ function DashboardContent() {
         .catch(() => setLoadingPdfs(false));
     }
   }, [session, status]); // refetch after upload
+
+  useEffect(() => {
+    if (selectedPdf) {
+      console.log('PDF URL:', selectedPdf.url);
+    }
+  }, [selectedPdf]);
 
   if (!session) {
     return (
@@ -93,12 +104,34 @@ function DashboardContent() {
               {pdfs.map((pdf) => (
                 <li key={pdf.id} className="bg-gray-900 p-2 rounded text-white flex items-center justify-between">
                   <span>{pdf.filename}</span>
-                  <a href={pdf.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline ml-2">View</a>
+                  <button
+                    className="text-blue-400 underline ml-2"
+                    onClick={() => setSelectedPdf(pdf)}
+                  >
+                    View
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </div>
+        {selectedPdf && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-2 text-white">Viewing: {selectedPdf.filename}</h2>
+            {/* Check if the URL is valid and starts with /uploads/ */}
+            {selectedPdf.url && selectedPdf.url.startsWith('/uploads/') ? (
+              <PDFViewer url={selectedPdf.url} />
+            ) : (
+              <div className="text-red-400">PDF URL is invalid or inaccessible: {selectedPdf.url}</div>
+            )}
+            <button
+              className="mt-2 text-red-400 underline"
+              onClick={() => setSelectedPdf(null)}
+            >
+              Close PDF
+            </button>
+          </div>
+        )}
         <Link href="/" className="text-blue-400 underline">Go to Home</Link>
       </div>
     </main>
