@@ -41,14 +41,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    const fileName = file.originalFilename || file.newFilename || "uploaded.pdf";
+    // Always use only the base filename
+    const fileName = path.basename(file.originalFilename || file.newFilename || "uploaded.pdf");
     const filePath = path.join(uploadDir, fileName);
     fs.copyFileSync(file.filepath, filePath);
     const user = await prisma.user.findUnique({ where: { email: sessionAny.user.email } });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    await prisma.pDF.create({
+    await prisma.PDF.create({
       data: {
         userId: user.id,
         filename: fileName,

@@ -62,15 +62,34 @@ const DashboardContent: React.FC = () => {
     }
   };
 
-  const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || !selectedPdf) return;
     setChatMessages((msgs) => [...msgs, { role: "user", content: userInput }]);
+    const question = userInput;
     setUserInput("");
-    // Placeholder: Add AI response after user message
-    setTimeout(() => {
-      setChatMessages((msgs) => [...msgs, { role: "ai", content: "[AI response goes here]" }]);
-    }, 800);
+    // Call backend to extract PDF text
+    try {
+      // Always send only the base filename
+      const baseFilename = selectedPdf.filename.split(/[\\/]/).pop();
+      const res = await fetch("/api/extract-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: baseFilename }),
+      });
+      if (!res.ok) throw new Error("Failed to extract PDF text");
+      const data = await res.json();
+      // For now, just echo the extracted text as the AI response
+      setChatMessages((msgs) => [
+        ...msgs,
+        { role: "ai", content: data.text ? data.text.slice(0, 1000) + (data.text.length > 1000 ? "..." : "") : "No text extracted from PDF." },
+      ]);
+    } catch (err: any) {
+      setChatMessages((msgs) => [
+        ...msgs,
+        { role: "ai", content: "[Error extracting PDF text: " + (err.message || "Unknown error") + "]" },
+      ]);
+    }
   };
 
   if (!session) {
@@ -125,13 +144,32 @@ const DashboardContent: React.FC = () => {
                 <ul className="space-y-2">
                   {pdfs.map((pdf) => (
                     <li key={pdf.id} className={`bg-gray-900 p-2 rounded text-white flex items-center justify-between ${selectedPdf && selectedPdf.id === pdf.id ? 'border border-blue-500' : ''}`}>
-                      <span className="truncate max-w-[10rem] md:max-w-[14rem] lg:max-w-[20rem] overflow-hidden whitespace-nowrap">{pdf.filename}</span>
-                      <button
-                        className="text-blue-400 underline ml-2"
-                        onClick={() => setSelectedPdf(pdf)}
-                      >
-                        View
-                      </button>
+                      <span className="truncate max-w-[8rem] md:max-w-[12rem] lg:max-w-[18rem] overflow-hidden whitespace-nowrap">{pdf.filename}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="text-blue-400 underline"
+                          onClick={() => setSelectedPdf(pdf)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="text-red-400 underline"
+                          onClick={async () => {
+                            setStatus(null);
+                            const res = await fetch(`/api/delete-pdf?id=${pdf.id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                              setStatus('PDF deleted.');
+                              setPdfs((prev) => prev.filter((p) => p.id !== pdf.id));
+                              if (selectedPdf && selectedPdf.id === pdf.id) setSelectedPdf(null);
+                            } else {
+                              const data = await res.json().catch(() => ({}));
+                              setStatus(data.error ? `Error: ${data.error}` : 'Delete failed.');
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

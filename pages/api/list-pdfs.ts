@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../src/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import path from "path";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -21,7 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    return res.status(200).json({ pdfs: user.pdfs });
+    // Always return only the base filename for each PDF
+    const pdfs = user.pdfs.map((pdf: any) => ({
+      ...pdf,
+      filename: path.basename(pdf.filename),
+    }));
+    return res.status(200).json({ pdfs });
   } catch (err) {
     return res.status(500).json({ error: "Failed to fetch PDFs" });
   }
