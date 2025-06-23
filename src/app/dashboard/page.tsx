@@ -43,6 +43,12 @@ const DashboardContent: React.FC = () => {
     }
   }, [selectedPdf]);
 
+  useEffect(() => {
+    if (selectedPdf && !pdfs.find((pdf) => pdf.id === selectedPdf.id)) {
+      setSelectedPdf(pdfs.length > 0 ? pdfs[0] : null);
+    }
+  }, [pdfs, selectedPdf]);
+
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus(null);

@@ -39,10 +39,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!file) {
       return res.status(400).json({ error: "No PDF file uploaded" });
     }
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    // Debug logging for filename fields
+    console.log('originalFilename:', file.originalFilename);
+    console.log('newFilename:', file.newFilename);
     // Always use only the base filename
     const fileName = path.basename(file.originalFilename || file.newFilename || "uploaded.pdf");
+    console.log('final fileName used:', fileName);
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     const filePath = path.join(uploadDir, fileName);
     fs.copyFileSync(file.filepath, filePath);
     const user = await prisma.user.findUnique({ where: { email: sessionAny.user.email } });
