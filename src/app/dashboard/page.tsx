@@ -19,6 +19,8 @@ const DashboardContent: React.FC = () => {
   const [pdfs, setPdfs] = useState<any[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<any | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState<number | null>(null);
   // Store chat history per PDF by id
   const [chatHistories, setChatHistories] = useState<Record<string, { role: "user" | "ai"; content: string }[]>>({});
   const [userInput, setUserInput] = useState("");
@@ -66,6 +68,11 @@ const DashboardContent: React.FC = () => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Reset page to 1 when PDF changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedPdf]);
 
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -118,6 +125,13 @@ const DashboardContent: React.FC = () => {
           { role: "ai", content: "Error getting AI answer." },
         ],
       }));
+    }
+  };
+
+  // Handler for custom page navigation
+  const goToPage = (page: number) => {
+    if (numPages && page >= 1 && page <= numPages) {
+      setCurrentPage(page);
     }
   };
 
@@ -242,7 +256,42 @@ const DashboardContent: React.FC = () => {
                   </button>
                 </form>
                 <div className="w-full mb-4 mt-4">
-                  <PDFViewer url={selectedPdf.url} />
+                  {/* Custom PDF navigation controls */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <button
+                      className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-white">
+                      Page
+                      <input
+                        type="number"
+                        min={1}
+                        max={numPages || 1}
+                        value={currentPage}
+                        onChange={e => goToPage(Number(e.target.value))}
+                        className="w-16 mx-2 p-1 rounded bg-gray-900 border border-gray-700 text-white text-center"
+                      />
+                      / {numPages || '?'}
+                    </span>
+                    <button
+                      className="px-2 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={!!numPages && currentPage >= numPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <PDFViewer
+                    url={selectedPdf.url}
+                    page={currentPage}
+                    onPageChange={setCurrentPage}
+                    // Get total pages from PDFViewer (add this prop to PdfViewer)
+                    onDocumentLoad={setNumPages}
+                  />
                 </div>
                 <button
                   className="mt-4 text-red-400 underline"
