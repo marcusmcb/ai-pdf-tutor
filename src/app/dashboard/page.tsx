@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import SessionProviderWrapper from "./SessionProviderWrapper";
@@ -19,8 +19,20 @@ const DashboardContent: React.FC = () => {
   const [pdfs, setPdfs] = useState<any[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<any | null>(null);
-  const [chatMessages, setChatMessages] = useState<{ role: "user" | "ai"; content: string }[]>([]);
+  // Store chat history per PDF by id
+  const [chatHistories, setChatHistories] = useState<Record<string, { role: "user" | "ai"; content: string }[]>>({});
   const [userInput, setUserInput] = useState("");
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Helper to get current chat messages for selected PDF
+  const chatMessages = selectedPdf ? chatHistories[selectedPdf.id] || [] : [];
+
+  // When selectedPdf changes, ensure chat history exists for it
+  useEffect(() => {
+    if (selectedPdf && !chatHistories[selectedPdf.id]) {
+      setChatHistories((prev) => ({ ...prev, [selectedPdf.id]: [] }));
+    }
+  }, [selectedPdf]);
 
   useEffect(() => {
     if (session) {
@@ -49,6 +61,12 @@ const DashboardContent: React.FC = () => {
     }
   }, [pdfs, selectedPdf]);
 
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus(null);
@@ -71,7 +89,10 @@ const DashboardContent: React.FC = () => {
   const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!userInput.trim() || !selectedPdf) return;
-    setChatMessages((msgs) => [...msgs, { role: "user", content: userInput }]);
+    setChatHistories((prev) => ({
+      ...prev,
+      [selectedPdf.id]: [...(prev[selectedPdf.id] || []), { role: "user", content: userInput }],
+    }));
     setUserInput("");
     try {
       const baseFilename = selectedPdf.filename.split(/[\\/]/).pop();
@@ -82,15 +103,21 @@ const DashboardContent: React.FC = () => {
       });
       if (!res.ok) throw new Error("Failed to get AI answer");
       const data = await res.json();
-      setChatMessages((msgs) => [
-        ...msgs,
-        { role: "ai", content: data.text || "No answer generated." },
-      ]);
+      setChatHistories((prev) => ({
+        ...prev,
+        [selectedPdf.id]: [
+          ...(prev[selectedPdf.id] || []),
+          { role: "ai", content: data.text || "No answer generated." },
+        ],
+      }));
     } catch (err) {
-      setChatMessages((msgs) => [
-        ...msgs,
-        { role: "ai", content: "Error getting AI answer." },
-      ]);
+      setChatHistories((prev) => ({
+        ...prev,
+        [selectedPdf.id]: [
+          ...(prev[selectedPdf.id] || []),
+          { role: "ai", content: "Error getting AI answer." },
+        ],
+      }));
     }
   };
 
@@ -183,17 +210,11 @@ const DashboardContent: React.FC = () => {
             {selectedPdf && selectedPdf.url && selectedPdf.url.startsWith('/uploads/') ? (
               <>
                 <h2 className="text-lg font-bold mb-2 text-white">Viewing: {selectedPdf.filename}</h2>
-                <div className="w-full mb-4">
-                  <PDFViewer url={selectedPdf.url} />
-                </div>
-                <button
-                  className="mt-4 text-red-400 underline"
-                  onClick={() => setSelectedPdf(null)}
+                {/* Chat UI - moved above PDFViewer */}
+                <div
+                  ref={chatContainerRef}
+                  className="w-full flex flex-col flex-1 mt-6 max-h-[350px] overflow-y-auto bg-gray-900 rounded p-4 border border-gray-700"
                 >
-                  Close PDF
-                </button>
-                {/* Chat UI */}
-                <div className="w-full flex flex-col flex-1 mt-6 max-h-[350px] overflow-y-auto bg-gray-900 rounded p-4 border border-gray-700">
                   {chatMessages.length === 0 && (
                     <div className="text-gray-400 text-center">Ask a question about this PDF to get started.</div>
                   )}
@@ -220,6 +241,15 @@ const DashboardContent: React.FC = () => {
                     Send
                   </button>
                 </form>
+                <div className="w-full mb-4 mt-4">
+                  <PDFViewer url={selectedPdf.url} />
+                </div>
+                <button
+                  className="mt-4 text-red-400 underline"
+                  onClick={() => setSelectedPdf(null)}
+                >
+                  Close PDF
+                </button>
               </>
             ) : pdfs.length === 0 ? (
               <div className="text-gray-400 text-center">Upload a PDF file to get started.</div>
