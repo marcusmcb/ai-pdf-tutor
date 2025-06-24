@@ -72,28 +72,24 @@ const DashboardContent: React.FC = () => {
     e.preventDefault();
     if (!userInput.trim() || !selectedPdf) return;
     setChatMessages((msgs) => [...msgs, { role: "user", content: userInput }]);
-    const question = userInput;
     setUserInput("");
-    // Call backend to extract PDF text
     try {
-      // Always send only the base filename
       const baseFilename = selectedPdf.filename.split(/[\\/]/).pop();
       const res = await fetch("/api/extract-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: baseFilename }),
+        body: JSON.stringify({ filename: baseFilename, question: userInput }),
       });
-      if (!res.ok) throw new Error("Failed to extract PDF text");
+      if (!res.ok) throw new Error("Failed to get AI answer");
       const data = await res.json();
-      // For now, just echo the extracted text as the AI response
       setChatMessages((msgs) => [
         ...msgs,
-        { role: "ai", content: data.text ? data.text.slice(0, 1000) + (data.text.length > 1000 ? "..." : "") : "No text extracted from PDF." },
+        { role: "ai", content: data.text || "No answer generated." },
       ]);
-    } catch (err: any) {
+    } catch (err) {
       setChatMessages((msgs) => [
         ...msgs,
-        { role: "ai", content: "[Error extracting PDF text: " + (err.message || "Unknown error") + "]" },
+        { role: "ai", content: "Error getting AI answer." },
       ]);
     }
   };
