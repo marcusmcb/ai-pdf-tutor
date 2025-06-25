@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Viewer, Worker, SpecialZoomLevel } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/core/lib/styles/index.css";
@@ -18,27 +18,35 @@ export default function PdfViewer({
   onPageChange,
   onDocumentLoad,
 }: PdfViewerProps) {
-  const [currentPage, setCurrentPage] = useState(page);
-  const defaultLayout = defaultLayoutPlugin();
+  // Create the plugin instance only once per component instance
+  const pluginInstance = useRef(defaultLayoutPlugin()).current;
+  const [pdfLoaded, setPdfLoaded] = useState(false);
 
-  // Sync with parent page prop
+  // When the page prop changes and PDF is loaded, jump to that page using the plugin API
   useEffect(() => {
-    setCurrentPage(page);
-  }, [page]);
+    if (pdfLoaded && pluginInstance && typeof page === "number" && !isNaN(page)) {
+      // @ts-ignore: store is available at runtime
+      const store = (pluginInstance as any).store;
+      const jumpToPage = store?.get && store.get("jumpToPage");
+      if (typeof jumpToPage === "function") {
+        jumpToPage(page - 1); // 0-based
+      }
+    }
+  }, [page, pluginInstance, pdfLoaded]);
 
   return (
     <div className="bg-black p-4 rounded" style={{ height: "800px" }}>
       <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
         <Viewer
           fileUrl={url}
-          plugins={[defaultLayout]}
+          plugins={[pluginInstance]}
           defaultScale={SpecialZoomLevel.PageFit}
           initialPage={page - 1}
           onPageChange={({ currentPage }: { currentPage: number }) => {
-            setCurrentPage(currentPage + 1);
             onPageChange && onPageChange(currentPage + 1);
           }}
           onDocumentLoad={(e: any) => {
+            setPdfLoaded(true);
             onDocumentLoad && onDocumentLoad(e.doc.numPages);
           }}
         />

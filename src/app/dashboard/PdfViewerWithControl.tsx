@@ -18,27 +18,27 @@ export default function PdfViewerWithControl({
   onPageChange,
   onDocumentLoad,
 }: PdfViewerProps) {
-  const viewerRef = useRef<any>(null);
-  const defaultLayout = defaultLayoutPlugin();
+  // Create the plugin instance only once per component instance
+  const pluginInstance = useRef(defaultLayoutPlugin()).current;
 
   // When the page prop changes, jump to that page using the plugin API
   useEffect(() => {
-    if (viewerRef.current && typeof page === "number" && !isNaN(page)) {
-      // @ts-ignore
-      const viewerInstance = viewerRef.current.viewer;
-      if (viewerInstance && viewerInstance.jumpToPage) {
-        viewerInstance.jumpToPage(page - 1); // 0-based
+    if (pluginInstance && typeof page === "number" && !isNaN(page)) {
+      // @ts-ignore: store is available at runtime
+      const store = (pluginInstance as any).store;
+      const jumpToPage = store?.get && store.get("jumpToPage");
+      if (typeof jumpToPage === "function") {
+        jumpToPage(page - 1); // 0-based
       }
     }
-  }, [page]);
+  }, [page, pluginInstance]);
 
   return (
     <div className="bg-black p-4 rounded" style={{ height: "800px" }}>
       <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
         <Viewer
-          ref={viewerRef}
           fileUrl={url}
-          plugins={[defaultLayout]}
+          plugins={[pluginInstance]}
           defaultScale={SpecialZoomLevel.PageFit}
           initialPage={page - 1}
           onPageChange={({ currentPage }: { currentPage: number }) => {
