@@ -57,19 +57,25 @@ export async function POST(req: NextRequest) {
       truncated = true;
     }
     // Compose prompt for OpenAI
-    const prompt = `You are an AI assistant. Answer the user's question based only on the following PDF content.\n\nPDF Content:${truncated ? " (truncated)" : ""}\n${pdfContent}\n\nQuestion: ${question}\nAnswer:`;
+    const prompt = `You are an AI assistant. Answer the user's question based only on the following PDF content.\n\nPDF Content:${truncated ? " (truncated)" : ""}\n${pdfContent}\n\nQuestion: ${question}\nAnswer: If you reference a page, always say 'See page X' (where X is the page number).`;
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: "You are an AI assistant that answers questions about PDF documents." },
+        { role: "system", content: "You are an AI assistant that answers questions about PDF documents. If you reference a page, always say 'See page X' (where X is the page number)." },
         { role: "user", content: prompt }
       ],
       max_tokens: 512,
       temperature: 0.2
     });
     const aiAnswer = completion.choices[0]?.message?.content || "No answer generated.";
-    return NextResponse.json({ text: aiAnswer });
+    // Extract page number from AI answer (e.g., 'See page 5')
+    let page = null;
+    const match = aiAnswer.match(/see page (\d+)/i);
+    if (match) {
+      page = parseInt(match[1], 10);
+    }
+    return NextResponse.json({ text: aiAnswer, page });
   } catch (error: any) {
     console.error("[extract-text] Error:", error, { method, url, ip, headers, filename, bodyText });
     return NextResponse.json({ error: error.message || "Failed to extract PDF text or get AI answer." }, { status: 500 });

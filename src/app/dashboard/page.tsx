@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import SessionProviderWrapper from "./SessionProviderWrapper";
 import dynamic from "next/dynamic";
+import PdfViewerWithControl from "./PdfViewerWithControl";
 
-const PDFViewer = dynamic(() => import("./PdfViewer"), { ssr: false }) as React.ComponentType<{ url: string }>;
+const PDFViewer = PdfViewerWithControl;
 
 const DashboardPage: React.FC = () => (
   <SessionProviderWrapper>
@@ -117,6 +118,10 @@ const DashboardContent: React.FC = () => {
           { role: "ai", content: data.text || "No answer generated." },
         ],
       }));
+      // Auto-navigate to referenced page if present
+      if (data.page && typeof data.page === "number") {
+        setCurrentPage(data.page);
+      }
     } catch (err) {
       setChatHistories((prev) => ({
         ...prev,
