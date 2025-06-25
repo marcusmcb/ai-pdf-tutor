@@ -3,10 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import SessionProviderWrapper from "./SessionProviderWrapper";
-import dynamic from "next/dynamic";
-import PdfViewerWithControl from "./PdfViewerWithControl";
-
-const PDFViewer = PdfViewerWithControl;
+import PdfViewer from "./PdfViewer";
 
 const DashboardPage: React.FC = () => (
   <SessionProviderWrapper>
@@ -290,7 +287,7 @@ const DashboardContent: React.FC = () => {
                       Next
                     </button>
                   </div>
-                  <PDFViewer
+                  <PdfViewer
                     url={selectedPdf.url}
                     page={currentPage}
                     onPageChange={setCurrentPage}
