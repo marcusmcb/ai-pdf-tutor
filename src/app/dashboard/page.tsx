@@ -11,6 +11,8 @@ const DashboardPage: React.FC = () => (
   </SessionProviderWrapper>
 );
 
+type ChatMessage = { role: "user" | "ai"; content: string };
+
 const DashboardContent: React.FC = () => {
   const { data: session } = useSession();
   const [status, setStatus] = useState<string | null>(null);
@@ -20,12 +22,13 @@ const DashboardContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState<number | null>(null);
   // Store chat history per PDF by id
-  const [chatHistories, setChatHistories] = useState<Record<string, { role: "user" | "ai"; content: string }[]>>({});
+  const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({});
   const [userInput, setUserInput] = useState("");
+  const [highlightText, setHighlightText] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Helper to get current chat messages for selected PDF
-  const chatMessages = selectedPdf ? chatHistories[selectedPdf.id] || [] : [];
+  const chatMessages: ChatMessage[] = selectedPdf ? chatHistories[selectedPdf.id] || [] : [];
 
   // When selectedPdf changes, ensure chat history exists for it
   useEffect(() => {
@@ -70,6 +73,11 @@ const DashboardContent: React.FC = () => {
   // Reset page to 1 when PDF changes
   useEffect(() => {
     setCurrentPage(1);
+  }, [selectedPdf]);
+
+  // Reset highlightText when PDF changes
+  useEffect(() => {
+    setHighlightText(null);
   }, [selectedPdf]);
 
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -119,6 +127,8 @@ const DashboardContent: React.FC = () => {
       if (data.page && typeof data.page === "number") {
         setCurrentPage(data.page);
       }
+      // Set highlight text for PDF viewer
+      setHighlightText(data.highlightText || null);
     } catch (err) {
       setChatHistories((prev) => ({
         ...prev,
@@ -127,6 +137,7 @@ const DashboardContent: React.FC = () => {
           { role: "ai", content: "Error getting AI answer." },
         ],
       }));
+      setHighlightText(null);
     }
   };
 
@@ -293,6 +304,7 @@ const DashboardContent: React.FC = () => {
                     onPageChange={setCurrentPage}
                     // Get total pages from PDFViewer (add this prop to PdfViewer)
                     onDocumentLoad={setNumPages}
+                    highlightText={highlightText}
                   />
                 </div>
                 <button
