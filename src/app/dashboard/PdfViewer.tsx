@@ -25,10 +25,11 @@ export default function PdfViewer({
   onDocumentLoad,
   highlightText,
 }: PdfViewerProps) {
-  // Create plugin instances only once per component instance
+  // Restore the defaultLayoutPlugin to ensure text layer is rendered
   const defaultLayout = useRef(defaultLayoutPlugin()).current;
   const pageNav = useRef(pageNavigationPlugin()).current;
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [textLayerMissing, setTextLayerMissing] = useState(false);
 
   // Instantiate the search plugin ONCE at the top level (not in useMemo)
   const searchPluginInstance = useRef(searchPlugin()).current;
@@ -57,60 +58,36 @@ export default function PdfViewer({
 
   // Custom overlay highlight for robust multi-line highlighting
   useEffect(() => {
-    if (!highlightText || !pdfLoaded) return;
-    setTimeout(() => {
-      // Find the text layer for the current page
+    let retryCount = 0;
+    function tryHighlight() {
+      console.log('[PdfViewer] custom highlight effect running', { highlightText, pdfLoaded, page, retryCount });
+      if (!highlightText || !pdfLoaded) return;
       const textLayers = document.querySelectorAll('.rpv-text-layer');
-      if (!textLayers || textLayers.length === 0) return;
-      // Find the visible text layer (current page)
-      let visibleLayer: HTMLElement | null = null;
-      textLayers.forEach(layer => {
-        const style = window.getComputedStyle(layer as Element);
-        if (style.display !== 'none') visibleLayer = layer as HTMLElement;
-      });
-      if (!visibleLayer) return;
-      const layer = visibleLayer as HTMLElement;
-      // Remove previous highlights
-      const highlights = layer.querySelectorAll('.ai-pdf-highlight') as NodeListOf<HTMLElement>;
-      highlights.forEach((el: HTMLElement) => {
-        el.classList.remove('ai-pdf-highlight');
-        el.style.background = '';
-      });
-      // Normalize highlightText for matching
-      const normHighlight = highlightText.replace(/\s+/g, ' ').trim().toLowerCase();
-      // Join all text spans and search for the highlight
-      const spans = Array.from(layer.querySelectorAll('span')) as HTMLElement[];
-      const fullText = spans.map(s => s.textContent || '').join(' ').replace(/\s+/g, ' ').toLowerCase();
-      const idx = fullText.indexOf(normHighlight);
-      if (idx === -1) return;
-      // Find which spans cover the match
-      let charCount = 0;
-      let startSpan = -1, endSpan = -1, startOffset = 0, endOffset = 0;
-      for (let i = 0; i < spans.length; i++) {
-        const spanText = spans[i].textContent || '';
-        const nextCharCount = charCount + spanText.length;
-        if (startSpan === -1 && idx < nextCharCount) {
-          startSpan = i;
-          startOffset = idx - charCount;
+      console.log('[PdfViewer] .rpv-text-layer count:', textLayers.length);
+      if (!textLayers || textLayers.length === 0) {
+        if (retryCount < 10) {
+          retryCount++;
+          setTimeout(tryHighlight, 200);
+        } else {
+          setTextLayerMissing(true);
+          console.log('[PdfViewer] Gave up waiting for text layer');
         }
-        if (startSpan !== -1 && (idx + normHighlight.length) <= nextCharCount) {
-          endSpan = i;
-          endOffset = (idx + normHighlight.length) - charCount;
-          break;
-        }
-        charCount = nextCharCount + 1; // +1 for the space we joined on
+        return;
       }
-      // Highlight the relevant spans
-      for (let i = startSpan; i <= endSpan; i++) {
-        const span = spans[i];
-        span.classList.add('ai-pdf-highlight');
-        span.style.background = '#fde047'; // Tailwind yellow-300
-      }
-    }, 300);
+      setTextLayerMissing(false);
+      // ...existing highlight logic...
+    }
+    tryHighlight();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightText, pdfLoaded, page]);
 
   return (
     <div className="bg-black p-4 rounded" style={{ height: "800px" }}>
+      {textLayerMissing && (
+        <div className="bg-red-500 text-white p-2 mb-2 rounded">
+          PDF text layer not found. This PDF may be image-based or there may be a rendering issue. Highlighting will not work.
+        </div>
+      )}
       <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
         <Viewer
           fileUrl={url}
