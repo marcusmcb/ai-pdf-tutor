@@ -46,17 +46,6 @@ export default function PdfViewer({
     console.log('[PdfViewer] regexPattern:', regexPattern);
   }, [highlightText, regexPattern]);
 
-  // Programmatically trigger highlight when highlightText or PDF loads
-  useEffect(() => {
-    if (highlightText && pdfLoaded && searchPluginInstance.highlight) {
-      searchPluginInstance.highlight({
-        keyword: highlightText,
-        regExp: new RegExp(regexPattern, "im"),
-      });
-      console.log('[PdfViewer] Called searchPluginInstance.highlight');
-    }
-  }, [highlightText, pdfLoaded, searchPluginInstance]);
-
   // When the page prop changes and PDF is loaded, jump to that page using the pageNavigationPlugin
   useEffect(() => {
     console.log('[PdfViewer] useEffect', { page, pdfLoaded });
@@ -66,12 +55,66 @@ export default function PdfViewer({
     }
   }, [page, pdfLoaded, pageNav]);
 
+  // Custom overlay highlight for robust multi-line highlighting
+  useEffect(() => {
+    if (!highlightText || !pdfLoaded) return;
+    setTimeout(() => {
+      // Find the text layer for the current page
+      const textLayers = document.querySelectorAll('.rpv-text-layer');
+      if (!textLayers || textLayers.length === 0) return;
+      // Find the visible text layer (current page)
+      let visibleLayer: HTMLElement | null = null;
+      textLayers.forEach(layer => {
+        const style = window.getComputedStyle(layer as Element);
+        if (style.display !== 'none') visibleLayer = layer as HTMLElement;
+      });
+      if (!visibleLayer) return;
+      const layer = visibleLayer as HTMLElement;
+      // Remove previous highlights
+      const highlights = layer.querySelectorAll('.ai-pdf-highlight') as NodeListOf<HTMLElement>;
+      highlights.forEach((el: HTMLElement) => {
+        el.classList.remove('ai-pdf-highlight');
+        el.style.background = '';
+      });
+      // Normalize highlightText for matching
+      const normHighlight = highlightText.replace(/\s+/g, ' ').trim().toLowerCase();
+      // Join all text spans and search for the highlight
+      const spans = Array.from(layer.querySelectorAll('span')) as HTMLElement[];
+      const fullText = spans.map(s => s.textContent || '').join(' ').replace(/\s+/g, ' ').toLowerCase();
+      const idx = fullText.indexOf(normHighlight);
+      if (idx === -1) return;
+      // Find which spans cover the match
+      let charCount = 0;
+      let startSpan = -1, endSpan = -1, startOffset = 0, endOffset = 0;
+      for (let i = 0; i < spans.length; i++) {
+        const spanText = spans[i].textContent || '';
+        const nextCharCount = charCount + spanText.length;
+        if (startSpan === -1 && idx < nextCharCount) {
+          startSpan = i;
+          startOffset = idx - charCount;
+        }
+        if (startSpan !== -1 && (idx + normHighlight.length) <= nextCharCount) {
+          endSpan = i;
+          endOffset = (idx + normHighlight.length) - charCount;
+          break;
+        }
+        charCount = nextCharCount + 1; // +1 for the space we joined on
+      }
+      // Highlight the relevant spans
+      for (let i = startSpan; i <= endSpan; i++) {
+        const span = spans[i];
+        span.classList.add('ai-pdf-highlight');
+        span.style.background = '#fde047'; // Tailwind yellow-300
+      }
+    }, 300);
+  }, [highlightText, pdfLoaded, page]);
+
   return (
     <div className="bg-black p-4 rounded" style={{ height: "800px" }}>
       <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
         <Viewer
           fileUrl={url}
-          plugins={[defaultLayout, pageNav, searchPluginInstance]}
+          plugins={[defaultLayout, pageNav]}
           defaultScale={SpecialZoomLevel.PageFit}
           initialPage={page - 1}
           onPageChange={({ currentPage }: { currentPage: number }) => {
